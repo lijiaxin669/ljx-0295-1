@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" width="150" height="150">
+  <defs>
+    <linearGradient id="xiBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FF4444"/>
+      <stop offset="100%" stop-color="#8B0000"/>
+    </linearGradient>
+    <linearGradient id="xiGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE066"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="130" height="130" rx="8" fill="url(#xiBg)"/>
+  <rect x="18" y="18" width="114" height="114" rx="4" fill="none" stroke="url(#xiGold)" stroke-width="2"/>
+  <rect x="28" y="28" width="94" height="94" rx="2" fill="none" stroke="url(#xiGold)" stroke-width="1" opacity="0.5"/>
+  <text x="75" y="108" text-anchor="middle" fill="url(#xiGold)" font-size="85" font-weight="bold" font-family="'Ma Shan Zheng', serif">喜</text>
+</svg>

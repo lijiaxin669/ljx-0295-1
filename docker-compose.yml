@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  transcoder:
+    image: jrottenberg/ffmpeg:5.1-alpine
+    entrypoint: ["sh", "-c", "while true; do sleep 3600; done"]
+    volumes:
+      - ./tmp:/tmp
+    profiles:
+      - transcoder
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 180" width="120" height="180">
+  <defs>
+    <radialGradient id="lanternGrad" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FF6B6B"/>
+      <stop offset="50%" stop-color="#C41E3A"/>
+      <stop offset="100%" stop-color="#8B0000"/>
+    </radialGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE066"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#B8860B"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="60" cy="15" rx="20" ry="8" fill="url(#goldGrad)"/>
+  <rect x="55" y="5" width="10" height="15" fill="url(#goldGrad)"/>
+  <ellipse cx="60" cy="90" rx="50" ry="65" fill="url(#lanternGrad)"/>
+  <path d="M10 90 Q60 20 110 90" stroke="url(#goldGrad)" stroke-width="3" fill="none"/>
+  <path d="M10 90 Q60 160 110 90" stroke="url(#goldGrad)" stroke-width="3" fill="none"/>
+  <line x1="60" y1="25" x2="60" y2="155" stroke="url(#goldGrad)" stroke-width="2"/>
+  <ellipse cx="60" cy="155" rx="20" ry="8" fill="url(#goldGrad)"/>
+  <path d="M45 163 L48 175 L52 165 L55 178 L60 165 L65 178 L68 165 L72 175 L75 163" stroke="#D4AF37" stroke-width="2" fill="none"/>
+  <circle cx="60" cy="90" r="8" fill="url(#goldGrad)" opacity="0.8"/>
+  <text x="60" y="96" text-anchor="middle" fill="#8B0000" font-size="12" font-weight="bold">福</text>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <defs>
+    <radialGradient id="horseBg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFE066"/>
+      <stop offset="70%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#B8860B"/>
+    </radialGradient>
+    <linearGradient id="horseBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B4513"/>
+      <stop offset="100%" stop-color="#5D3A1A"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="75" fill="url(#horseBg)"/>
+  <circle cx="80" cy="80" r="68" fill="none" stroke="#C41E3A" stroke-width="3"/>
+  <g transform="translate(30, 50)">
+    <ellipse cx="50" cy="60" rx="45" ry="35" fill="url(#horseBody)"/>
+    <ellipse cx="80" cy="30" rx="22" ry="28" fill="url(#horseBody)"/>
+    <ellipse cx="70" cy="8" rx="4" ry="12" fill="url(#horseBody)"/>
+    <ellipse cx="90" cy="8" rx="4" ry="12" fill="url(#horseBody)"/>
+    <circle cx="88" cy="28" r="3" fill="#FFFFFF"/>
+    <circle cx="88" cy="28" r="1.5" fill="#000000"/>
+    <path d="M75 45 Q80 52 85 45" stroke="#000000" stroke-width="2" fill="none"/>
+    <path d="M95 25 Q100 20 102 25 Q105 30 100 35" stroke="#333333" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <rect x="20" y="85" width="10" height="20" rx="3" fill="url(#horseBody)"/>
+    <rect x="35" y="85" width="10" height="20" rx="3" fill="url(#horseBody)"/>
+    <rect x="55" y="85" width="10" height="20" rx="3" fill="url(#horseBody)"/>
+    <rect x="70" y="85" width="10" height="20" rx="3" fill="url(#horseBody)"/>
+    <path d="M5 55 Q-5 50 0 65 Q5 75 15 70" stroke="#333333" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+  <text x="80" y="148" text-anchor="middle" fill="#C41E3A" font-size="18" font-weight="bold">马到成功</text>
+</svg>

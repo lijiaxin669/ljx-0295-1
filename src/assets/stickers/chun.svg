@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" width="150" height="150">
+  <defs>
+    <linearGradient id="chunBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B6B"/>
+      <stop offset="100%" stop-color="#C41E3A"/>
+    </linearGradient>
+    <linearGradient id="chunGold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFE066"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+  </defs>
+  <circle cx="75" cy="75" r="70" fill="url(#chunBg)"/>
+  <circle cx="75" cy="75" r="62" fill="none" stroke="url(#chunGold)" stroke-width="3"/>
+  <circle cx="75" cy="75" r="55" fill="none" stroke="url(#chunGold)" stroke-width="1" opacity="0.4"/>
+  <text x="75" y="102" text-anchor="middle" fill="url(#chunGold)" font-size="85" font-weight="bold" font-family="'Ma Shan Zheng', serif">春</text>
+</svg>
