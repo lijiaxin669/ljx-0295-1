@@ -1,60 +1,46 @@
 <script lang="ts">
-  import { getContext } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
   import { GREETINGS, CATEGORIES, getGreetingsByCategory } from '../../data/greetings';
-  import { canvas } from '../../stores/canvasStore';
-  import { brushConfig } from '../../stores/brushStore';
-  import { createEmptyStroke, createStrokePoint } from '../../utils/canvas/renderer';
+  import { textLayers } from '../../stores/textLayerStore';
+  import { FONT_PRESETS } from '../../data/fonts';
   import { exportStore } from '../../stores/exportStore';
+  import type { TextLayer } from '../../types/text';
+
+  const dispatch = createEventDispatcher<{
+    preview: void;
+    export: void;
+  }>();
 
   let selectedCategory = 'all';
   let showGreetingMenu = false;
 
-  const canvasCtx = getContext<{
-    playAnimation: () => void;
-    stopAnimation: () => void;
-  }>('canvas');
-
   const handleGreetingSelect = (text: string) => {
-    const brush = $brushConfig;
-    const stroke = createEmptyStroke(brush.color, brush.width, brush.opacity);
+    const layerData: Partial<TextLayer> = {
+      content: text,
+      fontFamily: FONT_PRESETS[0].fontFamily,
+      fontSize: 72,
+      color: '#C41E3A',
+      fontWeight: 'normal',
+      writingMode: 'horizontal',
+      textAlign: 'center',
+      x: 960,
+      y: 540,
+      lineHeight: 1.5,
+      letterSpacing: 4,
+      charAnimation: true
+    };
 
-    const startX = 400;
-    const startY = 500;
-    const charSpacing = 60;
-    let x = startX;
-
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      const points = generateCharPoints(char, x, startY);
-      stroke.points.push(...points);
-      x += charSpacing;
-    }
-
-    canvas.addStroke(stroke);
+    textLayers.addTextLayer(layerData);
     showGreetingMenu = false;
   };
 
-  const generateCharPoints = (char: string, x: number, y: number) => {
-    const points = [];
-    const size = 50;
-    const pointsPerChar = 30;
-
-    for (let i = 0; i <= pointsPerChar; i++) {
-      const t = i / pointsPerChar;
-      const px = x + Math.sin(t * Math.PI * 2) * size * 0.1 + t * size * 0.8 - size * 0.4;
-      const py = y + Math.cos(t * Math.PI * 2) * size * 0.1;
-      points.push(createStrokePoint(px, py, 0.8));
-    }
-
-    return points;
-  };
-
   const handlePreview = () => {
-    canvasCtx.playAnimation();
+    dispatch('preview');
   };
 
   const handleExport = () => {
     exportStore.openModal();
+    dispatch('export');
   };
 
   $: greetings = getGreetingsByCategory(selectedCategory);

@@ -9,17 +9,21 @@
   export let defaultX = 960;
   export let defaultY = 540;
 
-  const dispatch = createEventDispatcher();
+  const dispatch = createEventDispatcher<{
+    create: Partial<TextLayer>;
+    update: Partial<TextLayer> & { id: string };
+    close: void;
+  }>();
 
   let content = '新年快乐';
-  let fontFamily = 'kaishu';
+  let fontFamilyId = 'kaishu';
   let fontSize = 48;
   let color = '#D4AF37';
   let fontWeight: 'normal' | 'bold' = 'normal';
   let writingMode: WritingMode = 'horizontal';
   let textAlign: TextAlign = 'center';
   let lineHeight = 1.5;
-  let letterSpacing = 0;
+  let letterSpacing = 2;
   let charAnimation = true;
 
   const textAlignOptions: { value: TextAlign; label: string; icon: string }[] = [
@@ -34,7 +38,8 @@
     { value: 'bottom-right', label: '右下', icon: '↘' }
   ];
 
-  $: fontFamilyCss = getFontFamily(fontFamily);
+  $: fontFamilyCss = getFontFamily(fontFamilyId);
+  $: fontFamily = getFontFamily(fontFamilyId);
 
   const handleConfirm = () => {
     if (!content.trim()) {
@@ -63,17 +68,22 @@
     handleClose();
   };
 
+  const getFontIdFromFamily = (family: string): string => {
+    const font = FONT_PRESETS.find(f => f.fontFamily === family);
+    return font ? font.id : 'kaishu';
+  };
+
   const handleClose = () => {
     dispatch('close');
     content = '新年快乐';
-    fontFamily = 'kaishu';
+    fontFamilyId = 'kaishu';
     fontSize = 48;
     color = '#D4AF37';
     fontWeight = 'normal';
     writingMode = 'horizontal';
     textAlign = 'center';
     lineHeight = 1.5;
-    letterSpacing = 0;
+    letterSpacing = 2;
     charAnimation = true;
   };
 
@@ -86,7 +96,7 @@
   onMount(() => {
     if (editText) {
       content = editText.content;
-      fontFamily = editText.fontFamily;
+      fontFamilyId = getFontIdFromFamily(editText.fontFamily);
       fontSize = editText.fontSize;
       color = editText.color;
       fontWeight = editText.fontWeight;
@@ -100,7 +110,7 @@
 
   $: if (show && editText) {
     content = editText.content;
-    fontFamily = editText.fontFamily;
+    fontFamilyId = getFontIdFromFamily(editText.fontFamily);
     fontSize = editText.fontSize;
     color = editText.color;
     fontWeight = editText.fontWeight;
@@ -135,7 +145,7 @@
         <div class="form-row">
           <div class="form-group">
             <label for="font-family">字体</label>
-            <select id="font-family" bind:value={fontFamily}>
+            <select id="font-family" bind:value={fontFamilyId}>
               {#each FONT_PRESETS as font}
                 <option value={font.id}>{font.name}</option>
               {/each}

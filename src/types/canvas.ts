@@ -13,6 +13,7 @@ export interface Stroke {
   opacity: number;
   lineCap: 'round' | 'square';
   lineJoin: 'round' | 'bevel' | 'miter';
+  isEraser?: boolean;
 }
 
 export interface BrushConfig {

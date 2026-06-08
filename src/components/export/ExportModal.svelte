@@ -6,6 +6,8 @@
   import { canvas } from '../../stores/canvasStore';
   import { currentTemplate } from '../../stores/templateStore';
   import { stickers } from '../../stores/stickerStore';
+  import { textLayers } from '../../stores/textLayerStore';
+  import { rendererService } from '../../stores/rendererStore';
   import { RESOLUTION_MAP, QUALITY_PARAMS } from '../../types/export';
   import type { ExportFormat, ExportResolution, ExportQuality, ExportFPS } from '../../types/export';
   import { exportWithFFmpeg, loadFFmpeg } from '../../utils/export/ffmpeg';
@@ -85,11 +87,12 @@
   const handleStartExport = async () => {
     const config = get(exportConfig);
     const strokes = get(canvas).strokes;
-    const template = get(currentTemplate);
     const stickerList = get(stickers);
+    const textList = get(textLayers);
 
-    if (strokes.length === 0) {
-      alert('请先在画布上书写内容后再导出');
+    const hasContent = strokes.length > 0 || stickerList.length > 0 || textList.length > 0;
+    if (!hasContent) {
+      alert('请先在画布上添加内容后再导出');
       return;
     }
 
@@ -101,14 +104,21 @@
         await initFFmpeg();
       }
 
+      const frameRenderer = {
+        renderFrame: (progress: number) => {
+          rendererService.renderAnimationFrame(progress);
+        },
+        getCanvas: () => {
+          return rendererService.getAnimationCanvas();
+        }
+      };
+
       const result = await exportWithFFmpeg(
-        strokes,
-        template,
-        stickerList,
         config,
-        (frame, total) => {
-          const status = frame < total * 0.8 ? 'rendering' : 'encoding';
-          exportStore.updateProgress(frame, status);
+        frameRenderer,
+        (progress) => {
+          const status = progress.percent < 80 ? 'rendering' : 'encoding';
+          exportStore.updateProgress(progress.currentFrame, status);
         }
       );
 

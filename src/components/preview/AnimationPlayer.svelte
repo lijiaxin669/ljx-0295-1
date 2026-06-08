@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { animation, playbackState } from '../../stores/animationStore';
-  import { canvas as canvasStore } from '../../stores/canvasStore';
+  import { rendererService } from '../../stores/rendererStore';
+  import { get } from 'svelte/store';
 
   export let width = 640;
   export let height = 360;
@@ -10,7 +11,6 @@
   let ctx: CanvasRenderingContext2D;
   let animationFrame: number;
 
-  $: strokes = $canvasStore.strokes;
   $: template = $animation;
   $: playback = $playbackState;
   $: isPlaying = playback.isPlaying;
@@ -24,19 +24,24 @@
 
   const handlePlay = () => {
     animation.play();
+    rendererService.playAnimation();
   };
 
   const handlePause = () => {
     animation.pause();
+    rendererService.pauseAnimation();
   };
 
   const handleStop = () => {
     animation.stop();
+    rendererService.stopAnimation();
   };
 
   const handleSeek = (e: Event) => {
     const target = e.target as HTMLInputElement;
-    animation.seek(parseFloat(target.value));
+    const seekProgress = parseFloat(target.value);
+    animation.seek(seekProgress);
+    rendererService.seekAnimation(seekProgress);
   };
 
   const handleSpeedChange = (e: Event) => {
@@ -53,74 +58,28 @@
 
     ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-    if (strokes.length === 0) {
+    const sourceCanvas = rendererService.getAnimationCanvas();
+    if (!sourceCanvas) {
       ctx.fillStyle = '#f5f5f5';
       ctx.fillRect(0, 0, canvasElement.width, canvasElement.height);
       ctx.fillStyle = '#999';
       ctx.font = '16px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('暂无笔迹，请先在画布上书写', canvasElement.width / 2, canvasElement.height / 2);
+      ctx.fillText('等待画布初始化...', canvasElement.width / 2, canvasElement.height / 2);
       return;
     }
 
     const dpr = window.devicePixelRatio || 1;
-    const scaleX = canvasElement.width / 1920;
-    const scaleY = canvasElement.height / 1080;
+    const scaleX = canvasElement.width / sourceCanvas.width;
+    const scaleY = canvasElement.height / sourceCanvas.height;
     const scale = Math.min(scaleX, scaleY);
-    const offsetX = (canvasElement.width - 1920 * scale) / 2;
-    const offsetY = (canvasElement.height - 1080 * scale) / 2;
+    const offsetX = (canvasElement.width - sourceCanvas.width * scale) / 2;
+    const offsetY = (canvasElement.height - sourceCanvas.height * scale) / 2;
 
     ctx.save();
     ctx.translate(offsetX, offsetY);
     ctx.scale(scale, scale);
-
-    const totalDuration = 15 * 1000;
-    const currentTime = progress * totalDuration;
-
-    for (const stroke of strokes) {
-      if (stroke.points.length < 2) continue;
-
-      const firstPoint = stroke.points[0];
-      const lastPoint = stroke.points[stroke.points.length - 1];
-      const strokeStart = firstPoint.timestamp;
-      const strokeEnd = lastPoint.timestamp;
-
-      if (currentTime < strokeStart) continue;
-
-      let visibleProgress = 1;
-      if (currentTime < strokeEnd) {
-        visibleProgress = (currentTime - strokeStart) / (strokeEnd - strokeStart);
-      }
-
-      const visibleCount = Math.max(2, Math.floor(stroke.points.length * visibleProgress));
-      const visiblePoints = stroke.points.slice(0, visibleCount);
-
-      ctx.beginPath();
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.width;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.globalAlpha = stroke.opacity;
-
-      ctx.moveTo(visiblePoints[0].x, visiblePoints[0].y);
-
-      for (let i = 1; i < visiblePoints.length; i++) {
-        const p0 = visiblePoints[i - 2] || visiblePoints[0];
-        const p1 = visiblePoints[i - 1];
-        const p2 = visiblePoints[i];
-        const p3 = visiblePoints[i + 1] || p2;
-
-        const cp1x = p1.x + (p2.x - p0.x) / 6;
-        const cp1y = p1.y + (p2.y - p0.y) / 6;
-        const cp2x = p2.x - (p3.x - p1.x) / 6;
-        const cp2y = p2.y - (p3.y - p1.y) / 6;
-
-        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
-      }
-
-      ctx.stroke();
-    }
-
+    ctx.drawImage(sourceCanvas, 0, 0);
     ctx.restore();
   };
 
@@ -152,6 +111,14 @@
       drawFrame();
     }
   }
+
+  onMount(() => {
+    const unsubscribe = rendererService.subscribe(() => {
+      if (!isPlaying) {
+        drawFrame();
+      }
+    });
+  });
 
   onDestroy(() => {
     cancelAnimationFrame(animationFrame);

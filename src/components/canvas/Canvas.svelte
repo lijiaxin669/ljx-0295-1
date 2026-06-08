@@ -7,6 +7,7 @@
   import { stickers, sortedStickers, selectedSticker } from '../../stores/stickerStore';
   import { textLayers, sortedTextLayers, selectedTextLayer } from '../../stores/textLayerStore';
   import { animation, animationConfig } from '../../stores/animationStore';
+  import { rendererService } from '../../stores/rendererStore';
   import { CanvasRenderer, createStrokePoint, createEmptyStroke } from '../../utils/canvas/renderer';
   import { StrokeAnimationPlayer, preprocessStrokesForAnimation } from '../../utils/canvas/animation';
   import { getStickerTransformMatrix, getTransformedCorners, pointInPolygon, clamp, angle, distance } from '../../utils/math';
@@ -170,7 +171,8 @@
       currentStroke = createEmptyStroke(
         tool === 'eraser' ? getEraserColor() : brush.color,
         tool === 'eraser' ? brush.width * 2 : brush.width,
-        tool === 'eraser' ? 1 : brush.opacity
+        tool === 'eraser' ? 1 : brush.opacity,
+        tool === 'eraser'
       );
 
       const point = createStrokePoint(coords.x, coords.y);
@@ -589,6 +591,17 @@
     canvasElement.addEventListener('touchstart', handlePointerDown, { passive: false });
     canvasElement.addEventListener('touchmove', handlePointerMove, { passive: false });
     window.addEventListener('touchend', handlePointerUp);
+
+    rendererService.setRenderer({
+      renderAnimationFrame,
+      getAnimationCanvas,
+      playAnimation,
+      stopAnimation,
+      pauseAnimation,
+      resumeAnimation,
+      seekAnimation,
+      isAnimating: () => isAnimating
+    });
   });
 
   onDestroy(() => {
@@ -607,6 +620,7 @@
       canvasElement.removeEventListener('touchmove', handlePointerMove);
     }
     stickerImages.clear();
+    rendererService.clearRenderer();
   });
 </script>
 

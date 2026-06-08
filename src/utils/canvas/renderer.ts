@@ -93,6 +93,10 @@ export class CanvasRenderer {
     ctx.lineJoin = stroke.lineJoin;
     ctx.globalAlpha = stroke.opacity;
 
+    if (stroke.isEraser) {
+      ctx.globalCompositeOperation = 'destination-out';
+    }
+
     ctx.beginPath();
     ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
 
@@ -380,7 +384,7 @@ export function createStrokePoint(x: number, y: number, pressure: number = 1): S
   return { x, y, pressure, timestamp: Date.now() };
 }
 
-export function createEmptyStroke(color: string, width: number, opacity: number = 1): Stroke {
+export function createEmptyStroke(color: string, width: number, opacity: number = 1, isEraser: boolean = false): Stroke {
   return {
     id: `stroke-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     points: [],
@@ -388,6 +392,7 @@ export function createEmptyStroke(color: string, width: number, opacity: number 
     width,
     opacity,
     lineCap: 'round',
-    lineJoin: 'round'
+    lineJoin: 'round',
+    isEraser
   };
 }
