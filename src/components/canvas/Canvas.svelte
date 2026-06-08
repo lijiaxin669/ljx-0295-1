@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy, getContext } from 'svelte';
+  import { onMount, onDestroy, setContext } from 'svelte';
   import { get } from 'svelte/store';
   import { canvas as canvasStore, allStrokes } from '../../stores/canvasStore';
   import { brushConfig, currentTool } from '../../stores/brushStore';
@@ -27,6 +27,28 @@
   const stickerImages = new Map<string, HTMLImageElement>();
   let isAnimating = false;
   let animationProgress = 0;
+
+  const loadStickerImage = async (stickerId: string, src: string) => {
+    if (stickerImages.has(stickerId)) return;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = src;
+    try {
+      await img.decode();
+      stickerImages.set(stickerId, img);
+    } catch (e) {
+      console.warn('Failed to load sticker image:', src, e);
+    }
+  };
+
+  const preloadStickerImages = () => {
+    const stickerList = get(sortedStickers);
+    stickerList.forEach(sticker => {
+      if (!stickerImages.has(sticker.id)) {
+        loadStickerImage(sticker.id, sticker.src);
+      }
+    });
+  };
 
   const setCanvasSize = () => {
     const container = canvasElement.parentElement;
@@ -266,15 +288,10 @@
       strokes.forEach(stroke => renderer.drawStroke(stroke, 1));
     }
 
-    stickerList.forEach(async sticker => {
-      let img = stickerImages.get(sticker.id);
-      if (!img) {
-        img = new Image();
-        img.src = sticker.src;
-        await img.decode();
-        stickerImages.set(sticker.id, img);
-      }
-      if (img.complete) {
+    preloadStickerImages();
+    stickerList.forEach(sticker => {
+      const img = stickerImages.get(sticker.id);
+      if (img && img.complete) {
         renderer.drawSticker(sticker, img, selected?.id === sticker.id && !isAnimating);
       }
     });
@@ -414,8 +431,18 @@
     cancelAnimationFrame(rafId);
     if (animationPlayer) {
       animationPlayer.destroy();
+      animationPlayer = null;
     }
     window.removeEventListener('resize', setCanvasSize);
+    window.removeEventListener('mouseup', handlePointerUp);
+    window.removeEventListener('touchend', handlePointerUp);
+    if (canvasElement) {
+      canvasElement.removeEventListener('mousedown', handlePointerDown);
+      canvasElement.removeEventListener('mousemove', handlePointerMove);
+      canvasElement.removeEventListener('touchstart', handlePointerDown);
+      canvasElement.removeEventListener('touchmove', handlePointerMove);
+    }
+    stickerImages.clear();
   });
 </script>
 
