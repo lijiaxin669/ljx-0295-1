@@ -5,12 +5,20 @@
   import { brushConfig, currentTool } from '../../stores/brushStore';
   import { templateId, currentTemplate } from '../../stores/templateStore';
   import { stickers, sortedStickers, selectedSticker } from '../../stores/stickerStore';
+  import { textLayers, sortedTextLayers, selectedTextLayer } from '../../stores/textLayerStore';
   import { animation, animationConfig } from '../../stores/animationStore';
   import { CanvasRenderer, createStrokePoint, createEmptyStroke } from '../../utils/canvas/renderer';
   import { StrokeAnimationPlayer, preprocessStrokesForAnimation } from '../../utils/canvas/animation';
   import { getStickerTransformMatrix, getTransformedCorners, pointInPolygon, clamp, angle, distance } from '../../utils/math';
   import type { Stroke, StrokePoint } from '../../types/canvas';
   import type { Sticker, ControlPointType } from '../../types/sticker';
+  import type { TextLayer } from '../../types/text';
+  import { createEventDispatcher } from 'svelte';
+
+  const dispatch = createEventDispatcher<{
+    createText: { x: number; y: number };
+    editText: { layer: TextLayer };
+  }>();
 
   let canvasElement: HTMLCanvasElement;
   let renderer: CanvasRenderer;
@@ -103,8 +111,37 @@
     const coords = getCanvasCoords(e as MouseEvent);
     const tool = get(currentTool);
 
+    const hitText = findTextLayerAtPoint(coords.x, coords.y);
+    const hitSticker = findStickerAtPoint(coords.x, coords.y);
+
+    if (tool === 'text') {
+      if (hitText) {
+        textLayers.selectTextLayer(hitText.id);
+        stickers.selectSticker(null);
+        dispatch('editText', { layer: hitText });
+      } else {
+        dispatch('createText', { x: coords.x, y: coords.y });
+      }
+      return;
+    }
+
     if (tool === 'select' || tool === 'eraser') {
-      const hitSticker = findStickerAtPoint(coords.x, coords.y);
+      if (hitText) {
+        if (tool === 'eraser') {
+          textLayers.deleteTextLayer(hitText.id);
+        } else {
+          const controlHit = findTextControlPointAtPoint(coords.x, coords.y, hitText);
+          if (controlHit) {
+            textLayers.startTransform(coords.x, coords.y, controlHit);
+          } else {
+            textLayers.selectTextLayer(hitText.id);
+            stickers.selectSticker(null);
+            textLayers.startTransform(coords.x, coords.y);
+          }
+        }
+        return;
+      }
+
       if (hitSticker) {
         if (tool === 'eraser') {
           stickers.deleteSticker(hitSticker.id);
@@ -114,12 +151,14 @@
             stickers.startTransform(coords.x, coords.y, controlHit);
           } else {
             stickers.selectSticker(hitSticker.id);
+            textLayers.selectTextLayer(null);
             stickers.startTransform(coords.x, coords.y);
           }
         }
         return;
       } else if (tool === 'select') {
         stickers.selectSticker(null);
+        textLayers.selectTextLayer(null);
       }
     }
 
@@ -149,9 +188,15 @@
     e.preventDefault();
 
     const coords = getCanvasCoords(e as MouseEvent);
-    const transform = get(stickers.transform);
+    const stickerTransform = get(stickers.transform);
+    const textTransform = get(textLayers.transform);
 
-    if (transform.isDragging || transform.isResizing || transform.isRotating) {
+    if (textTransform.isDragging || textTransform.isResizing || textTransform.isRotating) {
+      handleTextTransform(coords.x, coords.y);
+      return;
+    }
+
+    if (stickerTransform.isDragging || stickerTransform.isResizing || stickerTransform.isRotating) {
       handleStickerTransform(coords.x, coords.y);
       return;
     }
@@ -172,8 +217,15 @@
   };
 
   const handlePointerUp = () => {
-    const transform = get(stickers.transform);
-    if (transform.isDragging || transform.isResizing || transform.isRotating) {
+    const stickerTransform = get(stickers.transform);
+    const textTransform = get(textLayers.transform);
+
+    if (textTransform.isDragging || textTransform.isResizing || textTransform.isRotating) {
+      textLayers.endTransform();
+      return;
+    }
+
+    if (stickerTransform.isDragging || stickerTransform.isResizing || stickerTransform.isRotating) {
       stickers.endTransform();
       return;
     }
@@ -200,6 +252,92 @@
       }
     }
     return null;
+  };
+
+  const findTextLayerAtPoint = (x: number, y: number): TextLayer | null => {
+    const allTexts = get(sortedTextLayers);
+    for (let i = allTexts.length - 1; i >= 0; i--) {
+      const text = allTexts[i];
+      if (text.hidden) continue;
+
+      const matrix = getStickerTransformMatrix(
+        text.x, text.y, text.rotation, text.scale,
+        false, false
+      );
+      const corners = getTransformedCorners(text.width, text.height, matrix);
+
+      if (pointInPolygon({ x, y }, corners)) {
+        return text;
+      }
+    }
+    return null;
+  };
+
+  const findTextControlPointAtPoint = (x: number, y: number, text: TextLayer): ControlPointType | null => {
+    const matrix = getStickerTransformMatrix(
+      text.x, text.y, text.rotation, text.scale,
+      false, false
+    );
+    const corners = getTransformedCorners(text.width, text.height, matrix);
+
+    const controlPoints: { type: ControlPointType; x: number; y: number }[] = [
+      { type: 'top-left', x: corners[0].x, y: corners[0].y },
+      { type: 'top-center', x: (corners[0].x + corners[1].x) / 2, y: (corners[0].y + corners[1].y) / 2 },
+      { type: 'top-right', x: corners[1].x, y: corners[1].y },
+      { type: 'middle-left', x: corners[0].x, y: (corners[0].y + corners[3].y) / 2 },
+      { type: 'middle-right', x: corners[1].x, y: (corners[1].y + corners[2].y) / 2 },
+      { type: 'bottom-left', x: corners[3].x, y: corners[3].y },
+      { type: 'bottom-center', x: (corners[3].x + corners[2].x) / 2, y: (corners[3].y + corners[2].y) / 2 },
+      { type: 'bottom-right', x: corners[2].x, y: corners[2].y },
+      { type: 'rotate', x: (corners[0].x + corners[1].x) / 2, y: (corners[0].y + corners[1].y) / 2 - 30 }
+    ];
+
+    for (const cp of controlPoints) {
+      if (Math.sqrt((x - cp.x) ** 2 + (y - cp.y) ** 2) < 15) {
+        return cp.type;
+      }
+    }
+    return null;
+  };
+
+  const handleTextTransform = (x: number, y: number) => {
+    const transform = get(textLayers.transform);
+    const selected = get(selectedTextLayer);
+    if (!transform.startText || !selected) return;
+
+    const deltaX = x - transform.startX;
+    const deltaY = y - transform.startY;
+    const start = transform.startText;
+
+    if (transform.isDragging) {
+      textLayers.updateTextLayer(selected.id, {
+        x: start.x + deltaX,
+        y: start.y + deltaY
+      });
+    } else if (transform.isResizing && transform.activeControl) {
+      handleTextResize(selected, start, deltaX, deltaY, transform.activeControl);
+    } else if (transform.isRotating) {
+      const currentAngle = angle({ x: start.x, y: start.y }, { x, y });
+      const startAngle = angle({ x: start.x, y: start.y }, { x: transform.startX, y: transform.startY });
+      textLayers.updateTextLayer(selected.id, {
+        rotation: start.rotation + (currentAngle - startAngle)
+      });
+    }
+  };
+
+  const handleTextResize = (
+    text: TextLayer,
+    start: TextLayer,
+    deltaX: number,
+    deltaY: number,
+    control: ControlPointType
+  ) => {
+    const delta = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+    const sign = control.includes('left') || control.includes('top') ? -1 : 1;
+    const scaleFactor = 1 + (sign * delta) / 200;
+    const newScale = clamp(start.scale * scaleFactor, 0.2, 5);
+
+    textLayers.updateTextLayer(text.id, { scale: newScale });
   };
 
   const findControlPointAtPoint = (x: number, y: number, sticker: Sticker): ControlPointType | null => {
@@ -275,7 +413,9 @@
     const template = get(currentTemplate);
     const strokes = get(allStrokes);
     const stickerList = get(sortedStickers);
-    const selected = get(selectedSticker);
+    const textList = get(sortedTextLayers);
+    const selectedStickerValue = get(selectedSticker);
+    const selectedTextValue = get(selectedTextLayer);
     const animConfig = get(animationConfig);
     const targetStrokes = preprocessStrokesForAnimation(strokes, animConfig.duration);
 
@@ -292,7 +432,20 @@
     stickerList.forEach(sticker => {
       const img = stickerImages.get(sticker.id);
       if (img && img.complete) {
-        renderer.drawSticker(sticker, img, selected?.id === sticker.id && !isAnimating);
+        renderer.drawSticker(sticker, img, selectedStickerValue?.id === sticker.id && !isAnimating);
+      }
+    });
+
+    textList.forEach(text => {
+      if (text.hidden) return;
+      const isSelected = selectedTextValue?.id === text.id && !isAnimating;
+      if (isAnimating && text.charAnimation) {
+        const totalCharCount = text.content.length;
+        const textProgress = Math.max(0, Math.min(1, (animationProgress - 0.3) / 0.7));
+        const visibleChars = Math.floor(textProgress * totalCharCount);
+        renderer.drawTextLayer(text, isSelected, textProgress);
+      } else {
+        renderer.drawTextLayer(text, isSelected, 1);
       }
     });
   };
@@ -384,6 +537,7 @@
     const template = get(currentTemplate);
     const strokes = get(allStrokes);
     const stickerList = get(sortedStickers);
+    const textList = get(sortedTextLayers);
     const animConfig = get(animationConfig);
     const processedStrokes = preprocessStrokesForAnimation(strokes, animConfig.duration);
 
@@ -395,6 +549,16 @@
       const img = stickerImages.get(sticker.id);
       if (img && img.complete) {
         animationRenderer!.drawSticker(sticker, img, false);
+      }
+    });
+
+    textList.forEach(text => {
+      if (text.hidden) return;
+      if (text.charAnimation) {
+        const textProgress = Math.max(0, Math.min(1, (progress - 0.3) / 0.7));
+        animationRenderer!.drawTextLayer(text, false, textProgress);
+      } else {
+        animationRenderer!.drawTextLayer(text, false, 1);
       }
     });
   };

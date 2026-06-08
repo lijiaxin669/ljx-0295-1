@@ -1,6 +1,9 @@
 import type { Stroke, StrokePoint, Template } from '../../types/canvas';
 import type { Sticker } from '../../types/sticker';
+import type { TextLayer } from '../../types/text';
 import { getStickerTransformMatrix, getTransformedCorners } from '../math';
+import { getFontFamily } from '../../data/fonts';
+import { getTextAlignOffset } from '../../stores/textLayerStore';
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -163,6 +166,127 @@ export class CanvasRenderer {
       sticker.flipX, sticker.flipY
     );
     const corners = getTransformedCorners(sticker.width, sticker.height, matrix);
+
+    ctx.strokeStyle = '#4A90D9';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(corners[0].x, corners[0].y);
+    corners.forEach(c => ctx.lineTo(c.x, c.y));
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#4A90D9';
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+
+    corners.forEach((c, i) => {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    const topCenter = {
+      x: (corners[0].x + corners[1].x) / 2,
+      y: (corners[0].y + corners[1].y) / 2 - 20
+    };
+    ctx.beginPath();
+    ctx.moveTo(topCenter.x, topCenter.y - 10);
+    ctx.lineTo(topCenter.x, topCenter.y + 10);
+    ctx.moveTo(topCenter.x - 10, topCenter.y);
+    ctx.lineTo(topCenter.x + 10, topCenter.y);
+    ctx.strokeStyle = '#4A90D9';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(topCenter.x, topCenter.y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#FF6B6B';
+    ctx.fill();
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  drawTextLayer(text: TextLayer, selected: boolean = false, charProgress: number = 1): void {
+    if (text.hidden) return;
+
+    const ctx = this.ctx;
+    ctx.save();
+
+    const matrix = getStickerTransformMatrix(
+      text.x, text.y, text.rotation, text.scale,
+      false, false
+    );
+
+    ctx.transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
+    ctx.globalAlpha = text.opacity;
+
+    const fontFamily = getFontFamily(text.fontFamily);
+    const fontSize = text.fontSize;
+    const fontWeight = text.fontWeight;
+
+    ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    ctx.fillStyle = text.color;
+    ctx.textBaseline = 'top';
+
+    const offset = getTextAlignOffset(text.textAlign, text.width, text.height);
+    const lines = text.content.split('\n');
+
+    if (text.writingMode === 'horizontal') {
+      const lineHeight = fontSize * text.lineHeight;
+      lines.forEach((line, lineIndex) => {
+        const charsToShow = charProgress >= 1
+          ? line.length
+          : Math.min(line.length, Math.floor(charProgress * line.length * lines.length) - lineIndex * line.length);
+
+        if (charsToShow > 0) {
+          const visibleText = line.substring(0, charsToShow);
+          let x = offset.x;
+          if (text.textAlign.includes('center')) {
+            x += (text.width - ctx.measureText(line).width) / 2;
+          } else if (text.textAlign.includes('right')) {
+            x += text.width - ctx.measureText(line).width;
+          }
+          ctx.fillText(visibleText, x, offset.y + lineIndex * lineHeight);
+        }
+      });
+    } else {
+      const charWidth = fontSize * text.lineHeight;
+      lines.forEach((line, lineIndex) => {
+        const charsToShow = charProgress >= 1
+          ? line.length
+          : Math.min(line.length, Math.floor(charProgress * line.length * lines.length) - lineIndex * line.length);
+
+        for (let i = 0; i < charsToShow; i++) {
+          const char = line[i];
+          const x = offset.x + lineIndex * charWidth + (charWidth - fontSize) / 2;
+          const y = offset.y + i * fontSize;
+          ctx.fillText(char, x, y);
+        }
+      });
+    }
+
+    ctx.restore();
+
+    if (selected && !text.locked) {
+      this.drawTextSelection(text);
+    }
+  }
+
+  drawTextSelection(text: TextLayer): void {
+    const ctx = this.ctx;
+    ctx.save();
+
+    const matrix = getStickerTransformMatrix(
+      text.x, text.y, text.rotation, text.scale,
+      false, false
+    );
+    const corners = getTransformedCorners(text.width, text.height, matrix);
 
     ctx.strokeStyle = '#4A90D9';
     ctx.lineWidth = 2;

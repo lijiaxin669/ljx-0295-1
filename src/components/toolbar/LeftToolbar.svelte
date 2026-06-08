@@ -5,6 +5,7 @@
   const tools: { id: ToolType; icon: string; label: string }[] = [
     { id: 'brush', icon: '✏️', label: '画笔' },
     { id: 'eraser', icon: '🧹', label: '橡皮擦' },
+    { id: 'text', icon: '📝', label: '文字' },
     { id: 'select', icon: '↔️', label: '选择/变换' }
   ];
 

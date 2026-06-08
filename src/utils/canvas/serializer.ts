@@ -1,7 +1,8 @@
 import type { Stroke, Sticker, ProjectData, AnimationConfig } from '../../types/canvas';
 import type { Sticker as StickerType } from '../../types/sticker';
+import type { TextLayer } from '../../types/text';
 
-const CURRENT_VERSION = '1.0';
+const CURRENT_VERSION = '1.1';
 
 export interface SerializedProject {
   version: string;
@@ -12,6 +13,7 @@ export interface SerializedProject {
   };
   strokes: Stroke[];
   stickers: StickerType[];
+  textLayers: TextLayer[];
   animationConfig: AnimationConfig;
   createdAt: string;
   updatedAt: string;
@@ -23,6 +25,7 @@ export function serializeProject(
   canvasHeight: number,
   strokes: Stroke[],
   stickers: StickerType[],
+  textLayers: TextLayer[],
   animationConfig: AnimationConfig
 ): string {
   const project: SerializedProject = {
@@ -62,6 +65,30 @@ export function serializeProject(
       width: s.width,
       height: s.height
     })),
+    textLayers: textLayers.map(t => ({
+      id: t.id,
+      type: t.type,
+      content: t.content,
+      fontFamily: t.fontFamily,
+      fontSize: t.fontSize,
+      color: t.color,
+      fontWeight: t.fontWeight,
+      writingMode: t.writingMode,
+      textAlign: t.textAlign,
+      x: Math.round(t.x * 100) / 100,
+      y: Math.round(t.y * 100) / 100,
+      scale: Math.round(t.scale * 100) / 100,
+      rotation: Math.round(t.rotation * 10000) / 10000,
+      opacity: Math.round(t.opacity * 100) / 100,
+      zIndex: t.zIndex,
+      width: t.width,
+      height: t.height,
+      lineHeight: Math.round(t.lineHeight * 100) / 100,
+      letterSpacing: Math.round(t.letterSpacing * 100) / 100,
+      charAnimation: t.charAnimation,
+      locked: t.locked,
+      hidden: t.hidden
+    })),
     animationConfig: {
       speed: Math.round(animationConfig.speed * 100) / 100,
       duration: animationConfig.duration,
@@ -84,6 +111,11 @@ export function deserializeProject(jsonString: string): SerializedProject {
 
     if (!validateVersion(project.version)) {
       console.warn(`Project version ${project.version} may not be fully compatible`);
+    }
+
+    if (!project.textLayers) {
+      project.textLayers = [];
+      console.info('Legacy 1.0 project file - adding empty textLayers array');
     }
 
     return project;
@@ -110,10 +142,11 @@ export function downloadProject(
   canvasHeight: number,
   strokes: Stroke[],
   stickers: StickerType[],
+  textLayers: TextLayer[],
   animationConfig: AnimationConfig,
   filename: string = 'new-year-card.json'
 ): void {
-  const json = serializeProject(template, canvasWidth, canvasHeight, strokes, stickers, animationConfig);
+  const json = serializeProject(template, canvasWidth, canvasHeight, strokes, stickers, textLayers, animationConfig);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
@@ -156,6 +189,7 @@ export function createSampleProject(): SerializedProject {
     canvas: { width: 1920, height: 1080 },
     strokes: [],
     stickers: [],
+    textLayers: [],
     animationConfig: {
       speed: 1,
       duration: 15,
@@ -170,6 +204,7 @@ export function getProjectSummary(project: SerializedProject): {
   template: string;
   strokeCount: number;
   stickerCount: number;
+  textLayerCount: number;
   duration: number;
   createdAt: string;
 } {
@@ -177,6 +212,7 @@ export function getProjectSummary(project: SerializedProject): {
     template: project.template,
     strokeCount: project.strokes.length,
     stickerCount: project.stickers.length,
+    textLayerCount: (project.textLayers || []).length,
     duration: project.animationConfig.duration,
     createdAt: project.createdAt
   };

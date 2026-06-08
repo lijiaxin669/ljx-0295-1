@@ -3,6 +3,7 @@
   import { templateId, availableTemplates } from '../../stores/templateStore';
   import { canvas } from '../../stores/canvasStore';
   import { stickers } from '../../stores/stickerStore';
+  import { textLayers } from '../../stores/textLayerStore';
   import { animation } from '../../stores/animationStore';
   import { downloadProject, loadProjectFromFile, isValidProjectFile } from '../../utils/canvas/serializer';
 
@@ -20,12 +21,14 @@
     if (confirm('确定要清空所有内容吗？')) {
       canvas.clear();
       stickers.clear();
+      textLayers.clearTextLayers();
     }
   };
 
   const handleExportJson = () => {
     const strokes = get(canvas).strokes;
     const stickerList = get(stickers);
+    const textList = get(textLayers);
     const template = get(templateId);
     const animConfig = get(animation);
 
@@ -34,6 +37,7 @@
       1920, 1080,
       strokes,
       stickerList,
+      textList,
       animConfig
     );
   };
@@ -57,6 +61,7 @@
       templateId.setTemplate(project.template);
       canvas.setStrokes(project.strokes);
       stickers.setStickers(project.stickers);
+      textLayers.setTextLayers(project.textLayers || []);
       animation.setConfig(project.animationConfig);
       alert('项目加载成功！');
     } catch (error) {

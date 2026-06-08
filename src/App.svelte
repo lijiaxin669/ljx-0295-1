@@ -5,12 +5,20 @@
   import LeftToolbar from './components/toolbar/LeftToolbar.svelte';
   import BottomBar from './components/toolbar/BottomBar.svelte';
   import StickerPanel from './components/sticker/StickerPanel.svelte';
+  import LayerPanel from './components/layer/LayerPanel.svelte';
+  import TextEditor from './components/text/TextEditor.svelte';
   import PreviewModal from './components/preview/PreviewModal.svelte';
   import ExportModal from './components/export/ExportModal.svelte';
   import { exportStore } from './stores/exportStore';
+  import { textLayers } from './stores/textLayerStore';
+  import { FONT_PRESETS } from './data/fonts';
+  import type { TextLayer } from './types/text';
 
   let showPreview = false;
   let showExport = false;
+  let showTextEditor = false;
+  let editingText: TextLayer | null = null;
+  let textEditorPosition = { x: 960, y: 540 };
 
   const handlePreview = () => {
     showPreview = true;
@@ -36,6 +44,56 @@
     exportStore.closeModal();
   };
 
+  const handleCreateText = (e: CustomEvent<{ x: number; y: number }>) => {
+    textEditorPosition = { x: e.detail.x, y: e.detail.y };
+    editingText = null;
+    showTextEditor = true;
+  };
+
+  const handleEditText = (e: CustomEvent<{ layer: TextLayer }>) => {
+    editingText = e.detail.layer;
+    textEditorPosition = { x: e.detail.layer.x, y: e.detail.layer.y };
+    showTextEditor = true;
+  };
+
+  const handleTextCreate = (e: CustomEvent<Partial<TextLayer>>) => {
+    const defaults = {
+      content: '新年快乐',
+      fontFamily: FONT_PRESETS[0].fontFamily,
+      fontSize: 72,
+      color: '#C41E3A',
+      fontWeight: 'normal' as const,
+      writingMode: 'horizontal' as const,
+      textAlign: 'center' as const,
+      lineHeight: 1.5,
+      letterSpacing: 2,
+      charAnimation: true
+    };
+
+    const layerData: Partial<TextLayer> = {
+      ...defaults,
+      ...e.detail,
+      x: textEditorPosition.x,
+      y: textEditorPosition.y
+    };
+
+    textLayers.addTextLayer(layerData);
+    showTextEditor = false;
+    editingText = null;
+  };
+
+  const handleTextUpdate = (e: CustomEvent<Partial<TextLayer>>) => {
+    if (!editingText) return;
+    textLayers.updateTextLayer(editingText.id, e.detail);
+    showTextEditor = false;
+    editingText = null;
+  };
+
+  const handleTextClose = () => {
+    showTextEditor = false;
+    editingText = null;
+  };
+
   onMount(() => {
     console.log('🎊 拜年贺卡工坊已启动');
     console.log('💡 提示：在画布上书写祝福，添加贴纸，然后导出视频');
@@ -53,8 +111,12 @@
     </aside>
 
     <section class="app-content">
-      <Canvas />
+      <Canvas
+        on:createText={handleCreateText}
+        on:editText={handleEditText}
+      />
       <StickerPanel canvasWidth={1920} canvasHeight={1080} />
+      <LayerPanel />
     </section>
   </main>
 
@@ -71,6 +133,14 @@
   <ExportModal
     show={showExport}
     on:close={handleExportClose}
+  />
+
+  <TextEditor
+    show={showTextEditor}
+    editingLayer={editingText}
+    on:create={handleTextCreate}
+    on:update={handleTextUpdate}
+    on:close={handleTextClose}
   />
 </div>
 
